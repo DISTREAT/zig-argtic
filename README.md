@@ -23,9 +23,33 @@ _Build using zig version: `0.10.1`_
 
 ## Example
 
-For examples, visit `examples/calculator.zig` and `src/tests.zig`.
+```zig
+// simple example - reduced to a minimum
+const specification = argtic.ArgumentSpecification{
+    .name = "exe",
+    .positionals = &[_]argtic.Positional{
+        .{ .name = "value" },
+    },
+};
 
-[Example](https://github.com/DISTREAT/zig-argtic/blob/master/examples/calculator.zig)
+const argument_vector = try std.process.argsAlloc(allocator);
+defer allocator.free(argument_vector);
+
+const arguments = try argtic.ArgumentProcessor.parse(allocator, specification, argument_vector[1..]);
+defer arguments.deinit();
+
+std.log.info("{s}", .{arguments.getArgument("value").?});
+```
+
+For more thorough examples, visit `examples/` and `src/tests.zig`.
+
+[Required Arguments](https://github.com/DISTREAT/zig-argtic/blob/master/examples/positionals.zig)
+
+[Optional Arguments](https://github.com/DISTREAT/zig-argtic/blob/master/examples/optionals.zig)
+
+[Optional Positionals](https://github.com/DISTREAT/zig-argtic/blob/master/examples/extra_positionals.zig)
+
+[Subcommands](https://github.com/DISTREAT/zig-argtic/blob/master/examples/subcommands.zig)
 
 ## Documentation
 
