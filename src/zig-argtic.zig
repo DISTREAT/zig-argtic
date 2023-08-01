@@ -168,7 +168,7 @@ pub const ArgumentTokenizer = struct {
             defer buffer.deinit();
 
             for (self.argument_vector[self.argument_index]) |char, index| {
-                if (char == '-' and index < 2) {
+                if (char == '-' and index < 2 and buffer.items.len == 0) {
                     switch (flag_type) {
                         .default => flag_type = .short,
                         .short => flag_type = .long,
