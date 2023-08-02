@@ -15,6 +15,7 @@ pub fn main() !void {
             .{ .name = "help", .short = 'h', .abort = true, .help = "Displays this help message" },
             .{ .name = "version", .help = "Displays the program's version" },
             .{ .name = "name", .short = 'n', .value = true, .help = "Your name" },
+            .{ .name = "exclude", .value = true },
         },
     };
 
@@ -28,6 +29,15 @@ pub fn main() !void {
         const name = arguments.getArgument("name").?;
         std.log.info("Your name is: {s}", .{name});
         return;
+    }
+
+    if (arguments.isArgument("exclude")) {
+        const exclude = (try arguments.getArguments(allocator, "exclude")).?;
+        defer allocator.free(exclude);
+
+        for (exclude) |file| {
+            std.log.info("Excluding this file: {s}", .{file});
+        }
     }
 
     if (arguments.isArgument("version")) std.log.info("0.1.0", .{});

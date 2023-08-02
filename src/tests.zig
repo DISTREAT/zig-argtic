@@ -108,6 +108,36 @@ test "Parsing flags alongside positional arguments" {
     try expect(std.mem.eql(u8, arguments_case_5.getArgument("log-level").?, "3"));
 }
 
+test "Parsing multiple flag values" {
+    const specification = argtic.ArgumentSpecification{
+        .name = "Test App",
+        .flags = &[_]argtic.Flag{
+            .{ .name = "exclude", .short = 'e', .value = true },
+        },
+    };
+
+    const arguments_case_1 = try argtic.ArgumentProcessor.parse(allocator, specification, &[_][]const u8{ "-e", "a", "--exclude=b", "--exclude", "c" });
+    defer arguments_case_1.deinit();
+
+    const arguments_case_2 = try argtic.ArgumentProcessor.parse(allocator, specification, &[_][]const u8{ "-e", "test" });
+    defer arguments_case_2.deinit();
+
+    const arguments_case_1_values = (try arguments_case_1.getArguments(allocator, "exclude")).?;
+    defer allocator.free(arguments_case_1_values);
+
+    const arguments_case_2_values = (try arguments_case_2.getArguments(allocator, "exclude")).?;
+    defer allocator.free(arguments_case_2_values);
+
+    try expect(arguments_case_1_values.len == 3);
+    try expect(arguments_case_1_values[0][0] == 'a');
+    try expect(arguments_case_1_values[1][0] == 'b');
+    try expect(arguments_case_1_values[2][0] == 'c');
+
+    try expect(arguments_case_2_values.len == 1);
+    try expect(std.mem.eql(u8, arguments_case_2_values[0], "test"));
+    try expect(std.mem.eql(u8, arguments_case_2.getArgument("exclude").?, "test"));
+}
+
 test "Parsing flags utilizing the compound-flag syntax" {
     const specification = argtic.ArgumentSpecification{
         .name = "Test App",

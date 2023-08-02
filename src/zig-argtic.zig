@@ -397,7 +397,7 @@ pub const ArgumentProcessor = struct {
         return false;
     }
 
-    /// Return the value of an argument
+    /// Return the first value of an argument
     pub fn getArgument(self: ArgumentProcessor, searched_key_name: []const u8) ?[]const u8 {
         for (self.tokens) |token| switch (token) {
             .flag => |flag| {
@@ -410,6 +410,22 @@ pub const ArgumentProcessor = struct {
         };
 
         return null;
+    }
+
+    /// Return the values of all optional arguments with the specified name
+    pub fn getArguments(self: ArgumentProcessor, allocator: Allocator, searched_flag_name: []const u8) !?[]const []const u8 {
+        var values = ArrayList([]const u8).init(allocator);
+
+        for (self.tokens) |token| switch (token) {
+            .flag => |flag| {
+                if (std.mem.eql(u8, flag.name, searched_flag_name)) try values.append(flag.value.?);
+            },
+            else => {},
+        };
+
+        if (values.items.len == 0) return null;
+
+        return values.toOwnedSlice();
     }
 
     /// Return a slice of all additional positionals that were not captured by ArgumentSpecification.positionals

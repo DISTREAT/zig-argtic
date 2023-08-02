@@ -294,7 +294,7 @@
 <span class="line" id="L168">            <span class="tok-kw">defer</span> buffer.deinit();</span>
 <span class="line" id="L169"></span>
 <span class="line" id="L170">            <span class="tok-kw">for</span> (self.argument_vector[self.argument_index]) |char, index| {</span>
-<span class="line" id="L171">                <span class="tok-kw">if</span> (char == <span class="tok-str">'-'</span> <span class="tok-kw">and</span> index &lt; <span class="tok-number">2</span>) {</span>
+<span class="line" id="L171">                <span class="tok-kw">if</span> (char == <span class="tok-str">'-'</span> <span class="tok-kw">and</span> index &lt; <span class="tok-number">2</span> <span class="tok-kw">and</span> buffer.items.len == <span class="tok-number">0</span>) {</span>
 <span class="line" id="L172">                    <span class="tok-kw">switch</span> (flag_type) {</span>
 <span class="line" id="L173">                        .default =&gt; flag_type = .short,</span>
 <span class="line" id="L174">                        .short =&gt; flag_type = .long,</span>
@@ -534,7 +534,7 @@
 <span class="line" id="L397">        <span class="tok-kw">return</span> <span class="tok-null">false</span>;</span>
 <span class="line" id="L398">    }</span>
 <span class="line" id="L399"></span>
-<span class="line" id="L400">    <span class="tok-comment">/// Return the value of an argument</span></span>
+<span class="line" id="L400">    <span class="tok-comment">/// Return the first value of an argument</span></span>
 <span class="line" id="L401">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">getArgument</span>(self: ArgumentProcessor, searched_key_name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
 <span class="line" id="L402">        <span class="tok-kw">for</span> (self.tokens) |token| <span class="tok-kw">switch</span> (token) {</span>
 <span class="line" id="L403">            .flag =&gt; |flag| {</span>
@@ -549,179 +549,198 @@
 <span class="line" id="L412">        <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
 <span class="line" id="L413">    }</span>
 <span class="line" id="L414"></span>
-<span class="line" id="L415">    <span class="tok-comment">/// Return a slice of all additional positionals that were not captured by ArgumentSpecification.positionals</span></span>
-<span class="line" id="L416">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">getExtraPositionals</span>(self: ArgumentProcessor, allocator: Allocator) Allocator.Error![]<span class="tok-kw">const</span> []<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
-<span class="line" id="L417">        <span class="tok-kw">var</span> extra_positionals = ArrayList([]<span class="tok-kw">const</span> <span class="tok-type">u8</span>).init(allocator);</span>
-<span class="line" id="L418">        <span class="tok-kw">errdefer</span> extra_positionals.deinit();</span>
-<span class="line" id="L419"></span>
-<span class="line" id="L420">        <span class="tok-kw">for</span> (self.tokens) |token| <span class="tok-kw">switch</span> (token) {</span>
-<span class="line" id="L421">            .extra_positional =&gt; |extra_positional| {</span>
-<span class="line" id="L422">                <span class="tok-kw">try</span> extra_positionals.append(extra_positional.value);</span>
-<span class="line" id="L423">            },</span>
-<span class="line" id="L424">            <span class="tok-kw">else</span> =&gt; {},</span>
-<span class="line" id="L425">        };</span>
-<span class="line" id="L426"></span>
-<span class="line" id="L427">        <span class="tok-kw">return</span> extra_positionals.toOwnedSlice();</span>
-<span class="line" id="L428">    }</span>
-<span class="line" id="L429">};</span>
+<span class="line" id="L415">    <span class="tok-comment">/// Return the values of all optional arguments with the specified name</span></span>
+<span class="line" id="L416">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">getArguments</span>(self: ArgumentProcessor, allocator: Allocator, searched_flag_name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) !?[]<span class="tok-kw">const</span> []<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L417">        <span class="tok-kw">var</span> values = ArrayList([]<span class="tok-kw">const</span> <span class="tok-type">u8</span>).init(allocator);</span>
+<span class="line" id="L418"></span>
+<span class="line" id="L419">        <span class="tok-kw">for</span> (self.tokens) |token| <span class="tok-kw">switch</span> (token) {</span>
+<span class="line" id="L420">            .flag =&gt; |flag| {</span>
+<span class="line" id="L421">                <span class="tok-kw">if</span> (std.mem.eql(<span class="tok-type">u8</span>, flag.name, searched_flag_name)) <span class="tok-kw">try</span> values.append(flag.value.?);</span>
+<span class="line" id="L422">            },</span>
+<span class="line" id="L423">            <span class="tok-kw">else</span> =&gt; {},</span>
+<span class="line" id="L424">        };</span>
+<span class="line" id="L425"></span>
+<span class="line" id="L426">        <span class="tok-kw">if</span> (values.items.len == <span class="tok-number">0</span>) <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L427"></span>
+<span class="line" id="L428">        <span class="tok-kw">return</span> values.toOwnedSlice();</span>
+<span class="line" id="L429">    }</span>
 <span class="line" id="L430"></span>
-<span class="line" id="L431"><span class="tok-comment">/// Crappy and untested convenience function to build and write a short usage message to stdout at runtime</span></span>
-<span class="line" id="L432"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">generateUsageMessage</span>(specification: ArgumentSpecification) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
-<span class="line" id="L433">    <span class="tok-kw">const</span> stdout = std.io.getStdOut().writer();</span>
-<span class="line" id="L434">    <span class="tok-kw">const</span> default_padding = <span class="tok-str">&quot; &quot;</span> ** <span class="tok-number">4</span>;</span>
-<span class="line" id="L435"></span>
-<span class="line" id="L436">    <span class="tok-kw">if</span> (specification.short_description) |short_description| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;{s}\n\n&quot;</span>, .{short_description});</span>
+<span class="line" id="L431">    <span class="tok-comment">// TODO?: getSubcommands</span>
+</span>
+<span class="line" id="L432"></span>
+<span class="line" id="L433">    <span class="tok-comment">/// Return a slice of all additional positionals that were not captured by ArgumentSpecification.positionals</span></span>
+<span class="line" id="L434">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">getExtraPositionals</span>(self: ArgumentProcessor, allocator: Allocator) Allocator.Error![]<span class="tok-kw">const</span> []<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L435">        <span class="tok-kw">var</span> extra_positionals = ArrayList([]<span class="tok-kw">const</span> <span class="tok-type">u8</span>).init(allocator);</span>
+<span class="line" id="L436">        <span class="tok-kw">errdefer</span> extra_positionals.deinit();</span>
 <span class="line" id="L437"></span>
-<span class="line" id="L438">    <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Usage:\n&quot;</span>);</span>
-<span class="line" id="L439">    <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;{s}{s} &quot;</span>, .{ default_padding, specification.name });</span>
-<span class="line" id="L440">    <span class="tok-kw">if</span> (specification.flags.len != <span class="tok-number">0</span>) <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;[options] &quot;</span>);</span>
-<span class="line" id="L441">    <span class="tok-kw">if</span> (specification.subcommands.len != <span class="tok-number">0</span>) <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;[sub-commands] &quot;</span>);</span>
-<span class="line" id="L442">    <span class="tok-kw">for</span> (specification.positionals) |positional| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;&lt;{s}&gt; &quot;</span>, .{positional.name});</span>
-<span class="line" id="L443">    <span class="tok-kw">if</span> (specification.extra_positionals) |extra_positionals| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;[{s}...]&quot;</span>, .{extra_positionals.name});</span>
-<span class="line" id="L444">    <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n\n&quot;</span>);</span>
-<span class="line" id="L445">}</span>
-<span class="line" id="L446"></span>
-<span class="line" id="L447"><span class="tok-comment">/// Crappy and untested convenience function to build and write a default and quite detailed help message to stdout at runtime</span></span>
-<span class="line" id="L448"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">generateHelpMessage</span>(specification: ArgumentSpecification) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
-<span class="line" id="L449">    <span class="tok-comment">// This code is an absolute abomination, but I start getting annoyed by this project and this function is not a core component ¯\_(ツ)_/¯</span>
+<span class="line" id="L438">        <span class="tok-kw">for</span> (self.tokens) |token| <span class="tok-kw">switch</span> (token) {</span>
+<span class="line" id="L439">            .extra_positional =&gt; |extra_positional| {</span>
+<span class="line" id="L440">                <span class="tok-kw">try</span> extra_positionals.append(extra_positional.value);</span>
+<span class="line" id="L441">            },</span>
+<span class="line" id="L442">            <span class="tok-kw">else</span> =&gt; {},</span>
+<span class="line" id="L443">        };</span>
+<span class="line" id="L444"></span>
+<span class="line" id="L445">        <span class="tok-kw">return</span> extra_positionals.toOwnedSlice();</span>
+<span class="line" id="L446">    }</span>
+<span class="line" id="L447">};</span>
+<span class="line" id="L448"></span>
+<span class="line" id="L449"><span class="tok-comment">/// Crappy and untested convenience function to build and write a short usage message to stdout at runtime</span></span>
+<span class="line" id="L450"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">generateUsageMessage</span>(specification: ArgumentSpecification) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
+<span class="line" id="L451">    <span class="tok-kw">const</span> stdout = std.io.getStdOut().writer();</span>
+<span class="line" id="L452">    <span class="tok-kw">const</span> default_padding = <span class="tok-str">&quot; &quot;</span> ** <span class="tok-number">4</span>;</span>
+<span class="line" id="L453"></span>
+<span class="line" id="L454">    <span class="tok-kw">if</span> (specification.short_description) |short_description| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;{s}\n\n&quot;</span>, .{short_description});</span>
+<span class="line" id="L455"></span>
+<span class="line" id="L456">    <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Usage:\n&quot;</span>);</span>
+<span class="line" id="L457">    <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;{s}{s} &quot;</span>, .{ default_padding, specification.name });</span>
+<span class="line" id="L458">    <span class="tok-kw">if</span> (specification.flags.len != <span class="tok-number">0</span>) <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;[options] &quot;</span>);</span>
+<span class="line" id="L459">    <span class="tok-kw">if</span> (specification.subcommands.len != <span class="tok-number">0</span>) <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;[sub-commands] &quot;</span>);</span>
+<span class="line" id="L460">    <span class="tok-kw">for</span> (specification.positionals) |positional| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;&lt;{s}&gt; &quot;</span>, .{positional.name});</span>
+<span class="line" id="L461">    <span class="tok-kw">if</span> (specification.extra_positionals) |extra_positionals| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;[{s}...]&quot;</span>, .{extra_positionals.name});</span>
+<span class="line" id="L462">    <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n\n&quot;</span>);</span>
+<span class="line" id="L463">}</span>
+<span class="line" id="L464"></span>
+<span class="line" id="L465"><span class="tok-comment">/// Crappy and untested convenience function to build and write a default and quite detailed help message to stdout at runtime</span></span>
+<span class="line" id="L466"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">generateHelpMessage</span>(specification: ArgumentSpecification) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
+<span class="line" id="L467">    <span class="tok-comment">// This code is an absolute abomination, but I start getting annoyed by this project and this function is not a core component ¯\_(ツ)_/¯</span>
 </span>
-<span class="line" id="L450">    <span class="tok-comment">// Thus, I will throw in some useless comments to segment the code and make future code reading slightly less painful</span>
+<span class="line" id="L468">    <span class="tok-comment">// Thus, I will throw in some useless comments to segment the code and make future code reading slightly less painful</span>
 </span>
-<span class="line" id="L451">    <span class="tok-comment">// I think better methods would be to utilize comptime or try to template more using Writer.print</span>
+<span class="line" id="L469">    <span class="tok-comment">// I think better methods would be to utilize comptime or try to template more using Writer.print</span>
 </span>
-<span class="line" id="L452">    <span class="tok-kw">const</span> stdout = std.io.getStdOut().writer();</span>
-<span class="line" id="L453">    <span class="tok-kw">const</span> default_padding = <span class="tok-str">&quot; &quot;</span> ** <span class="tok-number">4</span>;</span>
-<span class="line" id="L454"></span>
-<span class="line" id="L455">    <span class="tok-kw">try</span> generateUsageMessage(specification);</span>
-<span class="line" id="L456"></span>
-<span class="line" id="L457">    <span class="tok-comment">// search for the longest names to be able to calculate a new padding later, so that all help messages will be vertically aligned</span>
+<span class="line" id="L470">    <span class="tok-kw">const</span> stdout = std.io.getStdOut().writer();</span>
+<span class="line" id="L471">    <span class="tok-kw">const</span> default_padding = <span class="tok-str">&quot; &quot;</span> ** <span class="tok-number">4</span>;</span>
+<span class="line" id="L472"></span>
+<span class="line" id="L473">    <span class="tok-kw">try</span> generateUsageMessage(specification);</span>
+<span class="line" id="L474"></span>
+<span class="line" id="L475">    <span class="tok-comment">// search for the longest names to be able to calculate a new padding later, so that all help messages will be vertically aligned</span>
 </span>
-<span class="line" id="L458">    <span class="tok-kw">var</span> longest_flag_name: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L459">    <span class="tok-kw">for</span> (specification.flags) |flag| <span class="tok-kw">if</span> (flag.name.len &gt; longest_flag_name) {</span>
-<span class="line" id="L460">        longest_flag_name = flag.name.len;</span>
-<span class="line" id="L461">    };</span>
-<span class="line" id="L462"></span>
-<span class="line" id="L463">    <span class="tok-kw">var</span> longest_subcommand_name: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L464">    <span class="tok-kw">for</span> (specification.subcommands) |subcommand| <span class="tok-kw">if</span> (subcommand.name.len &gt; longest_subcommand_name) {</span>
-<span class="line" id="L465">        longest_subcommand_name = subcommand.name.len;</span>
-<span class="line" id="L466">    };</span>
-<span class="line" id="L467"></span>
-<span class="line" id="L468">    <span class="tok-kw">var</span> longest_positional_name: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L469">    <span class="tok-kw">for</span> (specification.positionals) |positional| <span class="tok-kw">if</span> (positional.name.len &gt; longest_positional_name) {</span>
-<span class="line" id="L470">        longest_positional_name = positional.name.len;</span>
-<span class="line" id="L471">    };</span>
-<span class="line" id="L472">    <span class="tok-kw">if</span> (specification.extra_positionals) |extra_positionals| <span class="tok-kw">if</span> (extra_positionals.name.len &gt; longest_positional_name) {</span>
-<span class="line" id="L473">        longest_positional_name = extra_positionals.name.len;</span>
-<span class="line" id="L474">    };</span>
-<span class="line" id="L475"></span>
-<span class="line" id="L476">    <span class="tok-kw">if</span> (specification.long_description) |long_description| {</span>
-<span class="line" id="L477">        <span class="tok-kw">var</span> lines = std.mem.split(<span class="tok-type">u8</span>, long_description, <span class="tok-str">&quot;\n&quot;</span>);</span>
-<span class="line" id="L478">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Description:\n&quot;</span>);</span>
-<span class="line" id="L479">        <span class="tok-kw">while</span> (lines.next()) |line| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;{s}{s}\n&quot;</span>, .{ default_padding, line });</span>
-<span class="line" id="L480">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
-<span class="line" id="L481">    }</span>
-<span class="line" id="L482"></span>
-<span class="line" id="L483">    <span class="tok-kw">if</span> (specification.positionals.len != <span class="tok-number">0</span>) {</span>
-<span class="line" id="L484">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Required:\n&quot;</span>);</span>
-<span class="line" id="L485">        <span class="tok-kw">for</span> (specification.positionals) |positional| {</span>
-<span class="line" id="L486">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
-<span class="line" id="L487">            <span class="tok-kw">try</span> stdout.writeAll(positional.name);</span>
-<span class="line" id="L488"></span>
-<span class="line" id="L489">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
+<span class="line" id="L476">    <span class="tok-kw">var</span> longest_flag_name: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L477">    <span class="tok-kw">for</span> (specification.flags) |flag| <span class="tok-kw">if</span> (flag.name.len &gt; longest_flag_name) {</span>
+<span class="line" id="L478">        longest_flag_name = flag.name.len;</span>
+<span class="line" id="L479">    };</span>
+<span class="line" id="L480"></span>
+<span class="line" id="L481">    <span class="tok-kw">var</span> longest_subcommand_name: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L482">    <span class="tok-kw">for</span> (specification.subcommands) |subcommand| <span class="tok-kw">if</span> (subcommand.name.len &gt; longest_subcommand_name) {</span>
+<span class="line" id="L483">        longest_subcommand_name = subcommand.name.len;</span>
+<span class="line" id="L484">    };</span>
+<span class="line" id="L485"></span>
+<span class="line" id="L486">    <span class="tok-kw">var</span> longest_positional_name: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L487">    <span class="tok-kw">for</span> (specification.positionals) |positional| <span class="tok-kw">if</span> (positional.name.len &gt; longest_positional_name) {</span>
+<span class="line" id="L488">        longest_positional_name = positional.name.len;</span>
+<span class="line" id="L489">    };</span>
+<span class="line" id="L490">    <span class="tok-kw">if</span> (specification.extra_positionals) |extra_positionals| <span class="tok-kw">if</span> (extra_positionals.name.len &gt; longest_positional_name) {</span>
+<span class="line" id="L491">        longest_positional_name = extra_positionals.name.len;</span>
+<span class="line" id="L492">    };</span>
+<span class="line" id="L493"></span>
+<span class="line" id="L494">    <span class="tok-kw">if</span> (specification.long_description) |long_description| {</span>
+<span class="line" id="L495">        <span class="tok-kw">var</span> lines = std.mem.split(<span class="tok-type">u8</span>, long_description, <span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L496">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Description:\n&quot;</span>);</span>
+<span class="line" id="L497">        <span class="tok-kw">while</span> (lines.next()) |line| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;{s}{s}\n&quot;</span>, .{ default_padding, line });</span>
+<span class="line" id="L498">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L499">    }</span>
+<span class="line" id="L500"></span>
+<span class="line" id="L501">    <span class="tok-kw">if</span> (specification.positionals.len != <span class="tok-number">0</span>) {</span>
+<span class="line" id="L502">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Required:\n&quot;</span>);</span>
+<span class="line" id="L503">        <span class="tok-kw">for</span> (specification.positionals) |positional| {</span>
+<span class="line" id="L504">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
+<span class="line" id="L505">            <span class="tok-kw">try</span> stdout.writeAll(positional.name);</span>
+<span class="line" id="L506"></span>
+<span class="line" id="L507">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
 </span>
-<span class="line" id="L490">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L491">            <span class="tok-kw">while</span> (index &lt;= (longest_positional_name - positional.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
-<span class="line" id="L492">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
-<span class="line" id="L493">            }</span>
-<span class="line" id="L494"></span>
-<span class="line" id="L495">            <span class="tok-kw">try</span> stdout.writeAll(positional.help <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
-<span class="line" id="L496">            <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
-<span class="line" id="L497">        }</span>
-<span class="line" id="L498"></span>
-<span class="line" id="L499">        <span class="tok-kw">if</span> (specification.extra_positionals) |extra_positionals| {</span>
-<span class="line" id="L500">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
-<span class="line" id="L501">            <span class="tok-kw">try</span> stdout.writeAll(extra_positionals.name);</span>
-<span class="line" id="L502"></span>
-<span class="line" id="L503">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
-</span>
-<span class="line" id="L504">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L505">            <span class="tok-kw">while</span> (index &lt;= (longest_positional_name - extra_positionals.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
-<span class="line" id="L506">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
-<span class="line" id="L507">            }</span>
-<span class="line" id="L508"></span>
-<span class="line" id="L509">            <span class="tok-kw">try</span> stdout.writeAll(extra_positionals.help <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
-<span class="line" id="L510">            <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
-<span class="line" id="L511">        }</span>
+<span class="line" id="L508">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L509">            <span class="tok-kw">while</span> (index &lt;= (longest_positional_name - positional.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
+<span class="line" id="L510">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
+<span class="line" id="L511">            }</span>
 <span class="line" id="L512"></span>
-<span class="line" id="L513">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
-<span class="line" id="L514">    }</span>
-<span class="line" id="L515"></span>
-<span class="line" id="L516">    <span class="tok-kw">if</span> (specification.flags.len != <span class="tok-number">0</span>) {</span>
-<span class="line" id="L517">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Options:\n&quot;</span>);</span>
-<span class="line" id="L518">        <span class="tok-kw">for</span> (specification.flags) |flag| {</span>
-<span class="line" id="L519">            <span class="tok-comment">// add short name</span>
+<span class="line" id="L513">            <span class="tok-kw">try</span> stdout.writeAll(positional.help <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
+<span class="line" id="L514">            <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L515">        }</span>
+<span class="line" id="L516"></span>
+<span class="line" id="L517">        <span class="tok-kw">if</span> (specification.extra_positionals) |extra_positionals| {</span>
+<span class="line" id="L518">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
+<span class="line" id="L519">            <span class="tok-kw">try</span> stdout.writeAll(extra_positionals.name);</span>
+<span class="line" id="L520"></span>
+<span class="line" id="L521">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
 </span>
-<span class="line" id="L520">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
-<span class="line" id="L521">            <span class="tok-kw">if</span> (flag.short) |short| {</span>
-<span class="line" id="L522">                <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;-{c}, &quot;</span>, .{short});</span>
-<span class="line" id="L523">            } <span class="tok-kw">else</span> {</span>
-<span class="line" id="L524">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;    &quot;</span>);</span>
+<span class="line" id="L522">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L523">            <span class="tok-kw">while</span> (index &lt;= (longest_positional_name - extra_positionals.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
+<span class="line" id="L524">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
 <span class="line" id="L525">            }</span>
 <span class="line" id="L526"></span>
-<span class="line" id="L527">            <span class="tok-comment">// add flag name</span>
+<span class="line" id="L527">            <span class="tok-kw">try</span> stdout.writeAll(extra_positionals.help <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
+<span class="line" id="L528">            <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L529">        }</span>
+<span class="line" id="L530"></span>
+<span class="line" id="L531">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L532">    }</span>
+<span class="line" id="L533"></span>
+<span class="line" id="L534">    <span class="tok-kw">if</span> (specification.flags.len != <span class="tok-number">0</span>) {</span>
+<span class="line" id="L535">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Options:\n&quot;</span>);</span>
+<span class="line" id="L536">        <span class="tok-kw">for</span> (specification.flags) |flag| {</span>
+<span class="line" id="L537">            <span class="tok-comment">// add short name</span>
 </span>
-<span class="line" id="L528">            <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;--{s}&quot;</span>, .{flag.name});</span>
-<span class="line" id="L529"></span>
-<span class="line" id="L530">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
+<span class="line" id="L538">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
+<span class="line" id="L539">            <span class="tok-kw">if</span> (flag.short) |short| {</span>
+<span class="line" id="L540">                <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;-{c}, &quot;</span>, .{short});</span>
+<span class="line" id="L541">            } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L542">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;    &quot;</span>);</span>
+<span class="line" id="L543">            }</span>
+<span class="line" id="L544"></span>
+<span class="line" id="L545">            <span class="tok-comment">// add flag name</span>
 </span>
-<span class="line" id="L531">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L532">            <span class="tok-kw">while</span> (index &lt;= (longest_flag_name - flag.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
-<span class="line" id="L533">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
-<span class="line" id="L534">            }</span>
-<span class="line" id="L535"></span>
-<span class="line" id="L536">            <span class="tok-comment">// option description</span>
+<span class="line" id="L546">            <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;--{s}&quot;</span>, .{flag.name});</span>
+<span class="line" id="L547"></span>
+<span class="line" id="L548">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
 </span>
-<span class="line" id="L537">            <span class="tok-kw">try</span> stdout.writeAll(flag.help <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
-<span class="line" id="L538">            <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
-<span class="line" id="L539">        }</span>
-<span class="line" id="L540">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
-<span class="line" id="L541">    }</span>
-<span class="line" id="L542"></span>
-<span class="line" id="L543">    <span class="tok-kw">if</span> (specification.subcommands.len != <span class="tok-number">0</span>) {</span>
-<span class="line" id="L544">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Sub-commands:\n&quot;</span>);</span>
-<span class="line" id="L545">        <span class="tok-kw">for</span> (specification.subcommands) |subcommand| {</span>
-<span class="line" id="L546">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
-<span class="line" id="L547">            <span class="tok-kw">try</span> stdout.writeAll(subcommand.name);</span>
-<span class="line" id="L548"></span>
-<span class="line" id="L549">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
+<span class="line" id="L549">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L550">            <span class="tok-kw">while</span> (index &lt;= (longest_flag_name - flag.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
+<span class="line" id="L551">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
+<span class="line" id="L552">            }</span>
+<span class="line" id="L553"></span>
+<span class="line" id="L554">            <span class="tok-comment">// option description</span>
 </span>
-<span class="line" id="L550">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
-<span class="line" id="L551">            <span class="tok-kw">while</span> (index &lt;= (longest_subcommand_name - subcommand.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
-<span class="line" id="L552">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
-<span class="line" id="L553">            }</span>
-<span class="line" id="L554"></span>
-<span class="line" id="L555">            <span class="tok-kw">try</span> stdout.writeAll(subcommand.short_description <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
+<span class="line" id="L555">            <span class="tok-kw">try</span> stdout.writeAll(flag.help <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
 <span class="line" id="L556">            <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
 <span class="line" id="L557">        }</span>
 <span class="line" id="L558">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
 <span class="line" id="L559">    }</span>
-<span class="line" id="L560">}</span>
-<span class="line" id="L561"></span>
-<span class="line" id="L562"><span class="tok-comment">/// A convenience function for writing a information about an ArgumentTokenizerError to stdout</span></span>
-<span class="line" id="L563"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">defaultErrorHandler</span>(tokenization_error: ArgumentTokenizerError) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
-<span class="line" id="L564">    <span class="tok-kw">const</span> stdout = std.io.getStdErr().writer();</span>
-<span class="line" id="L565"></span>
-<span class="line" id="L566">    <span class="tok-kw">switch</span> (tokenization_error) {</span>
-<span class="line" id="L567">        <span class="tok-kw">error</span>.MissingPositionals =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: not all required arguments were provided\n&quot;</span>),</span>
-<span class="line" id="L568">        <span class="tok-kw">error</span>.FlagNotFound =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a provided option does not exists or might be misspelled\n&quot;</span>),</span>
-<span class="line" id="L569">        <span class="tok-kw">error</span>.SplitFlagValue =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a provided option could not be parsed for its assigned value\n&quot;</span>),</span>
-<span class="line" id="L570">        <span class="tok-kw">error</span>.AssumptionTooManyPositionals =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: too many arguments were presumably provided\n&quot;</span>),</span>
-<span class="line" id="L571">        <span class="tok-kw">error</span>.TooManyEqualSigns =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: options may only allow for one equal sign as part of the gnu-style syntax\n&quot;</span>),</span>
-<span class="line" id="L572">        <span class="tok-kw">error</span>.ValueNotExpected =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a value was provided for an option that did not require one\n&quot;</span>),</span>
-<span class="line" id="L573">        <span class="tok-kw">error</span>.OutOfMemory =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: there is not enough free memory to parse the provided arguments\n&quot;</span>),</span>
-<span class="line" id="L574">        <span class="tok-kw">error</span>.NoValueProvided =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a flag requires a value\n&quot;</span>),</span>
-<span class="line" id="L575">    }</span>
-<span class="line" id="L576">}</span>
-<span class="line" id="L577"></span>
+<span class="line" id="L560"></span>
+<span class="line" id="L561">    <span class="tok-kw">if</span> (specification.subcommands.len != <span class="tok-number">0</span>) {</span>
+<span class="line" id="L562">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Sub-commands:\n&quot;</span>);</span>
+<span class="line" id="L563">        <span class="tok-kw">for</span> (specification.subcommands) |subcommand| {</span>
+<span class="line" id="L564">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
+<span class="line" id="L565">            <span class="tok-kw">try</span> stdout.writeAll(subcommand.name);</span>
+<span class="line" id="L566"></span>
+<span class="line" id="L567">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
+</span>
+<span class="line" id="L568">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L569">            <span class="tok-kw">while</span> (index &lt;= (longest_subcommand_name - subcommand.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
+<span class="line" id="L570">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
+<span class="line" id="L571">            }</span>
+<span class="line" id="L572"></span>
+<span class="line" id="L573">            <span class="tok-kw">try</span> stdout.writeAll(subcommand.short_description <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
+<span class="line" id="L574">            <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L575">        }</span>
+<span class="line" id="L576">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L577">    }</span>
+<span class="line" id="L578">}</span>
+<span class="line" id="L579"></span>
+<span class="line" id="L580"><span class="tok-comment">/// A convenience function for writing a information about an ArgumentTokenizerError to stdout</span></span>
+<span class="line" id="L581"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">defaultErrorHandler</span>(tokenization_error: ArgumentTokenizerError) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
+<span class="line" id="L582">    <span class="tok-kw">const</span> stdout = std.io.getStdErr().writer();</span>
+<span class="line" id="L583"></span>
+<span class="line" id="L584">    <span class="tok-kw">switch</span> (tokenization_error) {</span>
+<span class="line" id="L585">        <span class="tok-kw">error</span>.MissingPositionals =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: not all required arguments were provided\n&quot;</span>),</span>
+<span class="line" id="L586">        <span class="tok-kw">error</span>.FlagNotFound =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a provided option does not exists or might be misspelled\n&quot;</span>),</span>
+<span class="line" id="L587">        <span class="tok-kw">error</span>.SplitFlagValue =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a provided option could not be parsed for its assigned value\n&quot;</span>),</span>
+<span class="line" id="L588">        <span class="tok-kw">error</span>.AssumptionTooManyPositionals =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: too many arguments were presumably provided\n&quot;</span>),</span>
+<span class="line" id="L589">        <span class="tok-kw">error</span>.TooManyEqualSigns =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: options may only allow for one equal sign as part of the gnu-style syntax\n&quot;</span>),</span>
+<span class="line" id="L590">        <span class="tok-kw">error</span>.ValueNotExpected =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a value was provided for an option that did not require one\n&quot;</span>),</span>
+<span class="line" id="L591">        <span class="tok-kw">error</span>.OutOfMemory =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: there is not enough free memory to parse the provided arguments\n&quot;</span>),</span>
+<span class="line" id="L592">        <span class="tok-kw">error</span>.NoValueProvided =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a flag requires a value\n&quot;</span>),</span>
+<span class="line" id="L593">    }</span>
+<span class="line" id="L594">}</span>
+<span class="line" id="L595"></span>
 </code></pre></body>
 </html>
