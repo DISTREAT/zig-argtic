@@ -167,7 +167,7 @@ pub const ArgumentTokenizer = struct {
             var buffer = ArrayList(u8).init(self.allocator);
             defer buffer.deinit();
 
-            for (self.argument_vector[self.argument_index]) |char, index| {
+            for (self.argument_vector[self.argument_index], 0..) |char, index| {
                 if (char == '-' and index < 2 and buffer.items.len == 0) {
                     switch (flag_type) {
                         .default => flag_type = .short,
@@ -256,7 +256,7 @@ pub const ArgumentTokenizer = struct {
 
         return Token{ .compound_flag = .{
             .allocator = self.allocator,
-            .flags = flags.toOwnedSlice(),
+            .flags = try flags.toOwnedSlice(),
         } };
     }
 
@@ -333,7 +333,7 @@ pub const ArgumentTokenizer = struct {
 
         while (try self.nextToken()) |token| try tokens.append(token);
 
-        return tokens.toOwnedSlice();
+        return try tokens.toOwnedSlice();
     }
 };
 
@@ -425,7 +425,7 @@ pub const ArgumentProcessor = struct {
 
         if (values.items.len == 0) return null;
 
-        return values.toOwnedSlice();
+        return try values.toOwnedSlice();
     }
 
     /// Return a slice of all additional positionals that were not captured by ArgumentSpecification.positionals
@@ -440,7 +440,7 @@ pub const ArgumentProcessor = struct {
             else => {},
         };
 
-        return extra_positionals.toOwnedSlice();
+        return try extra_positionals.toOwnedSlice();
     }
 };
 
