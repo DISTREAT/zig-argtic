@@ -1,0 +1,746 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">    <title>zig-argtic.zig - source view</title>
+    <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAPNJREFUeNpi/P//PwMlgOXHUjly9E0G4hwgZmQiQZMqEK8H4v9QzUEgQSaoADK+zhH9iAGL+C0gDoAaNg9mGLoLfgA1awK9hS9gzgJxA9RQBmQDrgMxJzRMGKE4HYj/Ial5A8QmQLwCJoBsgBYW2+TR1ChDaWt4LOBxKsi/VUh8XiD+gq4IVyzwQAMJBoKwacZlAB8Qf0bi96IZhtOAe1D6LpqaEiz6rmEzQAeIzwGxCJpieFqApo/vQKyJboAaEBsAsSEupwI1MwKjGBTVHOhegMX5UajYRqiBjMgYmj400cVh0XgTiKdC0zhJgJHS7AwQYABm9EAdCKrEfAAAAABJRU5ErkJggg=="/>
+    <style>
+      body{
+        font-family: system-ui, -apple-system, Roboto, "Segoe UI", sans-serif;
+        margin: 0;
+        line-height: 1.5;
+      }
+
+      pre > code {
+        display: block;
+        overflow: auto;
+        line-height: normal;
+        margin: 0em;
+      }
+      .tok-kw {
+          color: #333;
+          font-weight: bold;
+      }
+      .tok-str {
+          color: #d14;
+      }
+      .tok-builtin {
+          color: #005C7A;
+      }
+      .tok-comment {
+          color: #545454;
+          font-style: italic;
+      }
+      .tok-fn {
+          color: #900;
+          font-weight: bold;
+      }
+      .tok-null {
+          color: #005C5C;
+      }
+      .tok-number {
+          color: #005C5C;
+      }
+      .tok-type {
+          color: #458;
+          font-weight: bold;
+      }
+      pre {
+        counter-reset: line;
+      }
+      pre .line:before {
+        counter-increment: line;
+        content: counter(line);
+        display: inline-block;
+        padding-right: 1em;
+        width: 2em;
+        text-align: right;
+        color: #999;
+      }
+      
+      .line {
+        width: 100%;
+        display: inline-block;
+      }
+      .line:target {
+        border-top: 1px solid #ccc;
+        border-bottom: 1px solid #ccc;
+        background: #fafafa;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body{
+            background:#222;
+            color: #ccc;
+        }
+        pre > code {
+            color: #ccc;
+            background: #222;
+            border: unset;
+        }
+        .line:target {
+            border-top: 1px solid #444;
+            border-bottom: 1px solid #444;
+            background: #333;
+        }
+        .tok-kw {
+            color: #eee;
+        }
+        .tok-str {
+            color: #2e5;
+        }
+        .tok-builtin {
+            color: #ff894c;
+        }
+        .tok-comment {
+            color: #aa7;
+        }
+        .tok-fn {
+            color: #B1A0F8;
+        }
+        .tok-null {
+            color: #ff8080;
+        }
+        .tok-number {
+            color: #ff8080;
+        }
+        .tok-type {
+            color: #68f;
+        }
+      }
+    </style>
+</head>
+<body>
+<pre><code><span class="line" id="L1"><span class="tok-comment">//! This module provides structs for parsing command-line options, arguments, and subcommands</span></span>
+<span class="line" id="L2"><span class="tok-comment">//! [Released under GNU LGPLv3]</span></span>
+<span class="line" id="L3"><span class="tok-comment">//!</span></span>
+<span class="line" id="L4"><span class="tok-comment">//! zig-autodoc-guide: ../../README.md</span></span>
+<span class="line" id="L5"><span class="tok-comment">//! zig-autodoc-guide: ../../LICENSE.txt</span></span>
+<span class="line" id="L6"><span class="tok-kw">const</span> std = <span class="tok-builtin">@import</span>(<span class="tok-str">&quot;std&quot;</span>);</span>
+<span class="line" id="L7"><span class="tok-kw">const</span> ArrayList = std.ArrayList;</span>
+<span class="line" id="L8"><span class="tok-kw">const</span> Allocator = std.mem.Allocator;</span>
+<span class="line" id="L9"></span>
+<span class="line" id="L10"><span class="tok-comment">/// Representation of an optional argument</span></span>
+<span class="line" id="L11"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> Flag = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L12">    <span class="tok-comment">/// The unique identifier of the optional argument</span></span>
+<span class="line" id="L13">    name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L14">    <span class="tok-comment">/// An unique abbreviation for the optional argument</span></span>
+<span class="line" id="L15">    short: ?<span class="tok-type">u8</span> = <span class="tok-null">null</span>,</span>
+<span class="line" id="L16">    <span class="tok-comment">/// Whether the argument should be able to hold any values</span></span>
+<span class="line" id="L17">    value: <span class="tok-type">bool</span> = <span class="tok-null">false</span>,</span>
+<span class="line" id="L18">    <span class="tok-comment">/// Abort the parsing process as soon as this option has passed lexical analysis</span></span>
+<span class="line" id="L19">    abort: <span class="tok-type">bool</span> = <span class="tok-null">false</span>,</span>
+<span class="line" id="L20">    <span class="tok-comment">/// A brief description of the argument</span></span>
+<span class="line" id="L21">    help: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span> = <span class="tok-null">null</span>,</span>
+<span class="line" id="L22">};</span>
+<span class="line" id="L23"></span>
+<span class="line" id="L24"><span class="tok-comment">/// Representation of a required argument</span></span>
+<span class="line" id="L25"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> Positional = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L26">    <span class="tok-comment">/// The unique identifier of the required argument</span></span>
+<span class="line" id="L27">    name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L28">    <span class="tok-comment">/// A brief description of the argument</span></span>
+<span class="line" id="L29">    help: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span> = <span class="tok-null">null</span>,</span>
+<span class="line" id="L30">};</span>
+<span class="line" id="L31"></span>
+<span class="line" id="L32"><span class="tok-comment">/// A struct for defining how and what arguments your program should be able to parse</span></span>
+<span class="line" id="L33"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> ArgumentSpecification = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L34">    <span class="tok-comment">/// The name of your program (or unique name of the subcommand when passed as a subcommand)</span></span>
+<span class="line" id="L35">    name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L36">    <span class="tok-comment">/// A brief description of your program</span></span>
+<span class="line" id="L37">    short_description: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span> = <span class="tok-null">null</span>,</span>
+<span class="line" id="L38">    <span class="tok-comment">/// A more detailed description of your program and/or additional information</span></span>
+<span class="line" id="L39">    long_description: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span> = <span class="tok-null">null</span>,</span>
+<span class="line" id="L40">    <span class="tok-comment">/// Arguments that are not required</span></span>
+<span class="line" id="L41">    flags: []<span class="tok-kw">const</span> Flag = &amp;.{},</span>
+<span class="line" id="L42">    <span class="tok-comment">/// Arguments that are required and have distinct identifiers for each index</span></span>
+<span class="line" id="L43">    positionals: []<span class="tok-kw">const</span> Positional = &amp;.{},</span>
+<span class="line" id="L44">    <span class="tok-comment">/// A special positional argument that acts as a placeholder for all additional arguments</span></span>
+<span class="line" id="L45">    <span class="tok-comment">/// not defined under the regular positionals (ex. could take a list of files)</span></span>
+<span class="line" id="L46">    extra_positionals: ?Positional = <span class="tok-null">null</span>,</span>
+<span class="line" id="L47">    <span class="tok-comment">/// Arguments that refer to other ArgumentSpecifications when called, grouping different actions</span></span>
+<span class="line" id="L48">    subcommands: []<span class="tok-kw">const</span> ArgumentSpecification = &amp;.{},</span>
+<span class="line" id="L49">};</span>
+<span class="line" id="L50"></span>
+<span class="line" id="L51"><span class="tok-comment">/// Errors produced, calling a method of struct ArgumentTokenizer that returns in a failure to tokenize the input</span></span>
+<span class="line" id="L52"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> ArgumentTokenizerError = <span class="tok-kw">error</span>{</span>
+<span class="line" id="L53">    <span class="tok-comment">/// The argument vector is missing positional arguments</span></span>
+<span class="line" id="L54">    MissingPositionals,</span>
+<span class="line" id="L55">    <span class="tok-comment">/// The provided flag name does not exist within the focused specification</span></span>
+<span class="line" id="L56">    FlagNotFound,</span>
+<span class="line" id="L57">    <span class="tok-comment">/// The provided flag requires a value, but no value was provided</span></span>
+<span class="line" id="L58">    NoValueProvided,</span>
+<span class="line" id="L59">    <span class="tok-comment">/// The provided flag could not be split into value and identifier</span></span>
+<span class="line" id="L60">    SplitFlagValue,</span>
+<span class="line" id="L61">    <span class="tok-comment">/// The provided arguments could not be parsed, presumably because too many positionals were provided</span></span>
+<span class="line" id="L62">    AssumptionTooManyPositionals,</span>
+<span class="line" id="L63">    <span class="tok-comment">/// The gnu optional=value syntax was not respected, because there are too many equal signs</span></span>
+<span class="line" id="L64">    TooManyEqualSigns,</span>
+<span class="line" id="L65">    <span class="tok-comment">/// The flag does not accept any values</span></span>
+<span class="line" id="L66">    ValueNotExpected,</span>
+<span class="line" id="L67">    <span class="tok-comment">/// There is not enough memory to tokenize the input</span></span>
+<span class="line" id="L68">    OutOfMemory,</span>
+<span class="line" id="L69">};</span>
+<span class="line" id="L70"></span>
+<span class="line" id="L71"><span class="tok-comment">// A struct for the tokenization of command-line arguments for further processing</span>
+</span>
+<span class="line" id="L72"><span class="tok-comment">// Note: Due to the complexity of this task the differentiation between lexing and parsing</span>
+</span>
+<span class="line" id="L73"><span class="tok-comment">//       is not made and summarized as tokenization</span>
+</span>
+<span class="line" id="L74"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> ArgumentTokenizer = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L75">    <span class="tok-comment">/// Storing the index of the argument in ArgumentTokenizer.argument_vector that will be focus next by ArgumentTokenizer.nextToken</span></span>
+<span class="line" id="L76">    argument_index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>,</span>
+<span class="line" id="L77">    <span class="tok-comment">/// Storing the index that will be assigned to the next Positional lexed</span></span>
+<span class="line" id="L78">    positional_index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>,</span>
+<span class="line" id="L79">    <span class="tok-comment">/// Abort the lexing process, will cause ArgumentTokenizer.nextToken to return null in any case without final checks (used for Flag.abort)</span></span>
+<span class="line" id="L80">    abort_lexing: <span class="tok-type">bool</span> = <span class="tok-null">false</span>,</span>
+<span class="line" id="L81">    <span class="tok-comment">/// An allocator used for buffering purposes (and provisional as an allocator for compound_flag tokens)</span></span>
+<span class="line" id="L82">    allocator: Allocator,</span>
+<span class="line" id="L83">    <span class="tok-comment">/// The argument specification that should be used to understand and tokenize the ArgumentTokenizer.argument_vector</span></span>
+<span class="line" id="L84">    specification: ArgumentSpecification,</span>
+<span class="line" id="L85">    <span class="tok-comment">/// A slice containing all the arguments for the tokenization process</span></span>
+<span class="line" id="L86">    argument_vector: []<span class="tok-kw">const</span> []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L87"></span>
+<span class="line" id="L88">    <span class="tok-comment">/// A union representing the tokens of the 'lexical analysis'</span></span>
+<span class="line" id="L89">    <span class="tok-kw">pub</span> <span class="tok-kw">const</span> Token = <span class="tok-kw">union</span>(<span class="tok-kw">enum</span>) {</span>
+<span class="line" id="L90">        flag: <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L91">            name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L92">            value: ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span> = <span class="tok-null">null</span>,</span>
+<span class="line" id="L93">        },</span>
+<span class="line" id="L94">        compound_flag: <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L95">            <span class="tok-comment">/// A slice of all the flag names passed</span></span>
+<span class="line" id="L96">            <span class="tok-comment">/// Note: compound flags may not have any value</span></span>
+<span class="line" id="L97">            flags: []<span class="tok-kw">const</span> []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L98">            <span class="tok-comment">/// Allocator for the allocation of flag names</span></span>
+<span class="line" id="L99">            allocator: Allocator,</span>
+<span class="line" id="L100"></span>
+<span class="line" id="L101">            <span class="tok-comment">// Not a fan of this solution, but better than having a segmentation fault ;)</span>
+</span>
+<span class="line" id="L102">            <span class="tok-comment">// I should rework the memory management asap</span>
+</span>
+<span class="line" id="L103">            <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">deinit</span>(self: <span class="tok-builtin">@This</span>()) <span class="tok-type">void</span> {</span>
+<span class="line" id="L104">                self.allocator.free(self.flags);</span>
+<span class="line" id="L105">            }</span>
+<span class="line" id="L106">        },</span>
+<span class="line" id="L107">        subcommand: <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L108">            name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L109">            <span class="tok-comment">/// The ArgumentSpecification of the subcommand</span></span>
+<span class="line" id="L110">            specification: ArgumentSpecification,</span>
+<span class="line" id="L111">        },</span>
+<span class="line" id="L112">        positional: <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L113">            name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L114">            value: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L115">        },</span>
+<span class="line" id="L116">        extra_positional: <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L117">            name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L118">            value: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>,</span>
+<span class="line" id="L119">        },</span>
+<span class="line" id="L120">    };</span>
+<span class="line" id="L121"></span>
+<span class="line" id="L122">    <span class="tok-comment">/// The order of the lexing methods that will be used for the tokenization process</span></span>
+<span class="line" id="L123">    <span class="tok-kw">const</span> lexing_functions = [_]*<span class="tok-kw">const</span> <span class="tok-kw">fn</span> (*ArgumentTokenizer) ArgumentTokenizerError!?Token{</span>
+<span class="line" id="L124">        <span class="tok-comment">// oder matters, since it will define control flow</span>
+</span>
+<span class="line" id="L125">        &amp;lexCompoundFlag,</span>
+<span class="line" id="L126">        &amp;lexFlag,</span>
+<span class="line" id="L127">        &amp;lexSubcommand,</span>
+<span class="line" id="L128">        &amp;lexPositional,</span>
+<span class="line" id="L129">        &amp;lexExtraPositionals,</span>
+<span class="line" id="L130">    };</span>
+<span class="line" id="L131"></span>
+<span class="line" id="L132">    <span class="tok-comment">/// Convenience method for returning the flag with the provided name</span></span>
+<span class="line" id="L133">    <span class="tok-kw">fn</span> <span class="tok-fn">getFlagLong</span>(self: ArgumentTokenizer, searched_flag_name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) ?Flag {</span>
+<span class="line" id="L134">        <span class="tok-kw">for</span> (self.specification.flags) |flag| {</span>
+<span class="line" id="L135">            <span class="tok-kw">if</span> (std.mem.eql(<span class="tok-type">u8</span>, flag.name, searched_flag_name)) <span class="tok-kw">return</span> flag;</span>
+<span class="line" id="L136">        }</span>
+<span class="line" id="L137">        <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L138">    }</span>
+<span class="line" id="L139"></span>
+<span class="line" id="L140">    <span class="tok-comment">/// Convenience method for returning the flag with the provided shorthand</span></span>
+<span class="line" id="L141">    <span class="tok-kw">fn</span> <span class="tok-fn">getFlagShort</span>(self: ArgumentTokenizer, searched_flag_shorthand: <span class="tok-type">u8</span>) ?Flag {</span>
+<span class="line" id="L142">        <span class="tok-kw">for</span> (self.specification.flags) |flag| {</span>
+<span class="line" id="L143">            <span class="tok-kw">if</span> (flag.short == <span class="tok-null">null</span>) <span class="tok-kw">continue</span>;</span>
+<span class="line" id="L144">            <span class="tok-kw">if</span> (flag.short.? == searched_flag_shorthand) <span class="tok-kw">return</span> flag;</span>
+<span class="line" id="L145">        }</span>
+<span class="line" id="L146">        <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L147">    }</span>
+<span class="line" id="L148"></span>
+<span class="line" id="L149">    <span class="tok-comment">/// When the method ArgumentTokenizer.nextToken returns null, indicating that the last Token has passed,</span></span>
+<span class="line" id="L150">    <span class="tok-comment">/// this method will be run to provide some more idiot-proofing checks (to Fail-Fast)</span></span>
+<span class="line" id="L151">    <span class="tok-kw">fn</span> <span class="tok-fn">finalChecks</span>(self: ArgumentTokenizer) ArgumentTokenizerError!<span class="tok-type">void</span> {</span>
+<span class="line" id="L152">        <span class="tok-kw">if</span> (self.positional_index &lt; self.specification.positionals.len) <span class="tok-kw">return</span> <span class="tok-kw">error</span>.MissingPositionals;</span>
+<span class="line" id="L153">    }</span>
+<span class="line" id="L154"></span>
+<span class="line" id="L155">    <span class="tok-comment">/// Lex for short and long flags with or without value</span></span>
+<span class="line" id="L156">    <span class="tok-kw">fn</span> <span class="tok-fn">lexFlag</span>(self: *ArgumentTokenizer) ArgumentTokenizerError!?Token {</span>
+<span class="line" id="L157">        <span class="tok-comment">// should make it possible to provide a positional argument with a dash as first character</span>
+</span>
+<span class="line" id="L158">        <span class="tok-comment">// sadly doesn't fix the issue for the first argument so it is commented out</span>
+</span>
+<span class="line" id="L159">        <span class="tok-comment">// thereby one could say argtic does not support positionals starting with a dash</span>
+</span>
+<span class="line" id="L160">        <span class="tok-comment">// if (self.positional_index != 0) return null;</span>
+</span>
+<span class="line" id="L161"></span>
+<span class="line" id="L162">        <span class="tok-comment">// to reduce complexity we will assume two different algorithms, based on the existence of an equal sign</span>
+</span>
+<span class="line" id="L163">        <span class="tok-comment">// since in 'posix-style' we use --flag value and in gnu-style --flag=value</span>
+</span>
+<span class="line" id="L164">        <span class="tok-comment">// this decision was made by favoring reduced complexity over reduced code duplication and reduced code nesting</span>
+</span>
+<span class="line" id="L165">        <span class="tok-kw">if</span> (std.mem.count(<span class="tok-type">u8</span>, self.argument_vector[self.argument_index], <span class="tok-str">&quot;=&quot;</span>) == <span class="tok-number">0</span>) {</span>
+<span class="line" id="L166">            <span class="tok-kw">var</span> flag_type: <span class="tok-kw">enum</span> { default, short, long } = .default;</span>
+<span class="line" id="L167">            <span class="tok-kw">var</span> buffer = ArrayList(<span class="tok-type">u8</span>).init(self.allocator);</span>
+<span class="line" id="L168">            <span class="tok-kw">defer</span> buffer.deinit();</span>
+<span class="line" id="L169"></span>
+<span class="line" id="L170">            <span class="tok-kw">for</span> (self.argument_vector[self.argument_index], <span class="tok-number">0</span>..) |char, index| {</span>
+<span class="line" id="L171">                <span class="tok-kw">if</span> (char == <span class="tok-str">'-'</span> <span class="tok-kw">and</span> index &lt; <span class="tok-number">2</span> <span class="tok-kw">and</span> buffer.items.len == <span class="tok-number">0</span>) {</span>
+<span class="line" id="L172">                    <span class="tok-kw">switch</span> (flag_type) {</span>
+<span class="line" id="L173">                        .default =&gt; flag_type = .short,</span>
+<span class="line" id="L174">                        .short =&gt; flag_type = .long,</span>
+<span class="line" id="L175">                        .long =&gt; <span class="tok-kw">unreachable</span>, <span class="tok-comment">// unreachable because of index &lt; 2 check</span>
+</span>
+<span class="line" id="L176">                    }</span>
+<span class="line" id="L177">                } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L178">                    <span class="tok-kw">try</span> buffer.append(char);</span>
+<span class="line" id="L179">                }</span>
+<span class="line" id="L180">            }</span>
+<span class="line" id="L181"></span>
+<span class="line" id="L182">            <span class="tok-kw">const</span> identifier = buffer.items; <span class="tok-comment">// using items instead of toOwnedSlice to prevent memory leak</span>
+</span>
+<span class="line" id="L183">            <span class="tok-kw">var</span> flag: Flag = <span class="tok-null">undefined</span>;</span>
+<span class="line" id="L184"></span>
+<span class="line" id="L185">            <span class="tok-kw">switch</span> (flag_type) {</span>
+<span class="line" id="L186">                .default =&gt; <span class="tok-kw">return</span> <span class="tok-null">null</span>, <span class="tok-comment">// not a flag since '-' or '--' did not match</span>
+</span>
+<span class="line" id="L187">                .short =&gt; {</span>
+<span class="line" id="L188">                    <span class="tok-comment">// originally an error, but this case is already captured by FlagNotFound in lexCompoundFlag</span>
+</span>
+<span class="line" id="L189">                    <span class="tok-kw">if</span> (identifier.len != <span class="tok-number">1</span>) <span class="tok-builtin">@panic</span>(<span class="tok-str">&quot;deprecated error error.InvalidShortFlagLength&quot;</span>);</span>
+<span class="line" id="L190">                    flag = self.getFlagShort(identifier[<span class="tok-number">0</span>]) <span class="tok-kw">orelse</span> <span class="tok-kw">return</span> <span class="tok-kw">error</span>.FlagNotFound;</span>
+<span class="line" id="L191">                },</span>
+<span class="line" id="L192">                .long =&gt; flag = self.getFlagLong(identifier) <span class="tok-kw">orelse</span> <span class="tok-kw">return</span> <span class="tok-kw">error</span>.FlagNotFound,</span>
+<span class="line" id="L193">            }</span>
+<span class="line" id="L194"></span>
+<span class="line" id="L195">            <span class="tok-kw">if</span> (flag.abort) self.abort_lexing = <span class="tok-null">true</span>;</span>
+<span class="line" id="L196"></span>
+<span class="line" id="L197">            <span class="tok-kw">if</span> (flag.value) {</span>
+<span class="line" id="L198">                <span class="tok-comment">// skip an argument to access the following value</span>
+</span>
+<span class="line" id="L199">                self.argument_index += <span class="tok-number">1</span>;</span>
+<span class="line" id="L200">                <span class="tok-kw">if</span> (self.argument_index &gt;= self.argument_vector.len) <span class="tok-kw">return</span> <span class="tok-kw">error</span>.NoValueProvided;</span>
+<span class="line" id="L201"></span>
+<span class="line" id="L202">                <span class="tok-kw">return</span> Token{ .flag = .{</span>
+<span class="line" id="L203">                    .name = flag.name,</span>
+<span class="line" id="L204">                    .value = self.argument_vector[self.argument_index],</span>
+<span class="line" id="L205">                } };</span>
+<span class="line" id="L206">            } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L207">                <span class="tok-kw">return</span> Token{ .flag = .{</span>
+<span class="line" id="L208">                    .name = flag.name,</span>
+<span class="line" id="L209">                } };</span>
+<span class="line" id="L210">            }</span>
+<span class="line" id="L211">        } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L212">            <span class="tok-kw">const</span> argument = self.argument_vector[self.argument_index];</span>
+<span class="line" id="L213"></span>
+<span class="line" id="L214">            <span class="tok-kw">if</span> (argument.len &lt;= <span class="tok-number">2</span>) <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L215">            <span class="tok-kw">if</span> (!std.mem.eql(<span class="tok-type">u8</span>, argument[<span class="tok-number">0</span>..<span class="tok-number">2</span>], <span class="tok-str">&quot;--&quot;</span>)) <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L216">            <span class="tok-kw">if</span> (std.mem.count(<span class="tok-type">u8</span>, argument, <span class="tok-str">&quot;=&quot;</span>) != <span class="tok-number">1</span>) <span class="tok-kw">return</span> <span class="tok-kw">error</span>.TooManyEqualSigns;</span>
+<span class="line" id="L217"></span>
+<span class="line" id="L218">            <span class="tok-kw">var</span> split = std.mem.split(<span class="tok-type">u8</span>, argument[<span class="tok-number">2</span>..], <span class="tok-str">&quot;=&quot;</span>);</span>
+<span class="line" id="L219"></span>
+<span class="line" id="L220">            <span class="tok-kw">const</span> flag_name = split.next() <span class="tok-kw">orelse</span> <span class="tok-kw">return</span> <span class="tok-kw">error</span>.SplitFlagValue;</span>
+<span class="line" id="L221">            <span class="tok-kw">const</span> flag_value = split.next() <span class="tok-kw">orelse</span> <span class="tok-kw">return</span> <span class="tok-kw">error</span>.SplitFlagValue;</span>
+<span class="line" id="L222"></span>
+<span class="line" id="L223">            <span class="tok-kw">if</span> (self.getFlagLong(flag_name)) |flag| {</span>
+<span class="line" id="L224">                <span class="tok-kw">if</span> (!flag.value) <span class="tok-kw">return</span> <span class="tok-kw">error</span>.ValueNotExpected;</span>
+<span class="line" id="L225">                <span class="tok-kw">if</span> (flag.abort) self.abort_lexing = <span class="tok-null">true</span>;</span>
+<span class="line" id="L226">            } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L227">                <span class="tok-kw">return</span> <span class="tok-kw">error</span>.FlagNotFound;</span>
+<span class="line" id="L228">            }</span>
+<span class="line" id="L229"></span>
+<span class="line" id="L230">            <span class="tok-kw">return</span> Token{ .flag = .{</span>
+<span class="line" id="L231">                .name = flag_name,</span>
+<span class="line" id="L232">                .value = flag_value,</span>
+<span class="line" id="L233">            } };</span>
+<span class="line" id="L234">        }</span>
+<span class="line" id="L235">    }</span>
+<span class="line" id="L236"></span>
+<span class="line" id="L237">    <span class="tok-comment">/// Lex for compound flags, grouped together by combining the shorts of flags</span></span>
+<span class="line" id="L238">    <span class="tok-kw">fn</span> <span class="tok-fn">lexCompoundFlag</span>(self: *ArgumentTokenizer) ArgumentTokenizerError!?Token {</span>
+<span class="line" id="L239">        <span class="tok-kw">const</span> argument = self.argument_vector[self.argument_index];</span>
+<span class="line" id="L240"></span>
+<span class="line" id="L241">        <span class="tok-kw">if</span> (argument.len &lt; <span class="tok-number">3</span>) <span class="tok-kw">return</span> <span class="tok-null">null</span>; <span class="tok-comment">// must be 1+2 char long, because otherwise it might just be a short flag</span>
+</span>
+<span class="line" id="L242">        <span class="tok-kw">if</span> (argument[<span class="tok-number">0</span>] != <span class="tok-str">'-'</span>) <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L243">        <span class="tok-kw">if</span> (argument[<span class="tok-number">1</span>] == <span class="tok-str">'-'</span>) <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L244"></span>
+<span class="line" id="L245">        <span class="tok-kw">var</span> flags = ArrayList([]<span class="tok-kw">const</span> <span class="tok-type">u8</span>).init(self.allocator);</span>
+<span class="line" id="L246">        <span class="tok-kw">errdefer</span> flags.deinit();</span>
+<span class="line" id="L247"></span>
+<span class="line" id="L248">        <span class="tok-kw">for</span> (argument[<span class="tok-number">1</span>..argument.len]) |char| {</span>
+<span class="line" id="L249">            <span class="tok-kw">if</span> (self.getFlagShort(char)) |flag| {</span>
+<span class="line" id="L250">                <span class="tok-kw">if</span> (flag.abort) self.abort_lexing = <span class="tok-null">true</span>;</span>
+<span class="line" id="L251">                <span class="tok-kw">try</span> flags.append(flag.name);</span>
+<span class="line" id="L252">            } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L253">                <span class="tok-kw">return</span> <span class="tok-kw">error</span>.FlagNotFound;</span>
+<span class="line" id="L254">            }</span>
+<span class="line" id="L255">        }</span>
+<span class="line" id="L256"></span>
+<span class="line" id="L257">        <span class="tok-kw">return</span> Token{ .compound_flag = .{</span>
+<span class="line" id="L258">            .allocator = self.allocator,</span>
+<span class="line" id="L259">            .flags = <span class="tok-kw">try</span> flags.toOwnedSlice(),</span>
+<span class="line" id="L260">        } };</span>
+<span class="line" id="L261">    }</span>
+<span class="line" id="L262"></span>
+<span class="line" id="L263">    <span class="tok-comment">/// Lex for subcommands, changing ArgumentTokenizer.specification to the specification of a matched subcommand in ArgumentSpecification.subcommands</span></span>
+<span class="line" id="L264">    <span class="tok-kw">fn</span> <span class="tok-fn">lexSubcommand</span>(self: *ArgumentTokenizer) ArgumentTokenizerError!?Token {</span>
+<span class="line" id="L265">        <span class="tok-kw">if</span> (self.positional_index != <span class="tok-number">0</span>) <span class="tok-kw">return</span> <span class="tok-null">null</span>; <span class="tok-comment">// do not parse subcommands when positionals were already passed</span>
+</span>
+<span class="line" id="L266"></span>
+<span class="line" id="L267">        <span class="tok-kw">for</span> (self.specification.subcommands) |specification| {</span>
+<span class="line" id="L268">            <span class="tok-kw">if</span> (std.mem.eql(<span class="tok-type">u8</span>, specification.name, self.argument_vector[self.argument_index])) {</span>
+<span class="line" id="L269">                self.specification = specification;</span>
+<span class="line" id="L270"></span>
+<span class="line" id="L271">                <span class="tok-kw">return</span> Token{ .subcommand = .{</span>
+<span class="line" id="L272">                    .name = specification.name,</span>
+<span class="line" id="L273">                    .specification = specification,</span>
+<span class="line" id="L274">                } };</span>
+<span class="line" id="L275">            }</span>
+<span class="line" id="L276">        }</span>
+<span class="line" id="L277"></span>
+<span class="line" id="L278">        <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L279">    }</span>
+<span class="line" id="L280"></span>
+<span class="line" id="L281">    <span class="tok-comment">/// Lex for positional arguments, as specified in ArgumentSpecification.positionals</span></span>
+<span class="line" id="L282">    <span class="tok-kw">fn</span> <span class="tok-fn">lexPositional</span>(self: *ArgumentTokenizer) ArgumentTokenizerError!?Token {</span>
+<span class="line" id="L283">        <span class="tok-kw">if</span> (self.positional_index &gt;= self.specification.positionals.len) <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L284"></span>
+<span class="line" id="L285">        <span class="tok-kw">const</span> token = Token{ .positional = .{</span>
+<span class="line" id="L286">            .name = self.specification.positionals[self.positional_index].name,</span>
+<span class="line" id="L287">            .value = self.argument_vector[self.argument_index],</span>
+<span class="line" id="L288">        } };</span>
+<span class="line" id="L289"></span>
+<span class="line" id="L290">        self.positional_index += <span class="tok-number">1</span>;</span>
+<span class="line" id="L291"></span>
+<span class="line" id="L292">        <span class="tok-kw">return</span> token;</span>
+<span class="line" id="L293">    }</span>
+<span class="line" id="L294"></span>
+<span class="line" id="L295">    <span class="tok-comment">/// Lex for additional positionals not captured by ArgumentSpecification.positionals</span></span>
+<span class="line" id="L296">    <span class="tok-kw">fn</span> <span class="tok-fn">lexExtraPositionals</span>(self: *ArgumentTokenizer) ArgumentTokenizerError!?Token {</span>
+<span class="line" id="L297">        <span class="tok-kw">if</span> (self.specification.extra_positionals == <span class="tok-null">null</span>) <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L298"></span>
+<span class="line" id="L299">        <span class="tok-kw">return</span> Token{ .extra_positional = .{</span>
+<span class="line" id="L300">            .name = self.specification.extra_positionals.?.name,</span>
+<span class="line" id="L301">            .value = self.argument_vector[self.argument_index],</span>
+<span class="line" id="L302">        } };</span>
+<span class="line" id="L303">    }</span>
+<span class="line" id="L304"></span>
+<span class="line" id="L305">    <span class="tok-comment">/// Forward one step in the tokenization process, return the produced Token</span></span>
+<span class="line" id="L306">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">nextToken</span>(self: *ArgumentTokenizer) ArgumentTokenizerError!?Token {</span>
+<span class="line" id="L307">        <span class="tok-kw">if</span> (self.abort_lexing) <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L308">        <span class="tok-kw">if</span> (self.argument_index &gt;= self.argument_vector.len) {</span>
+<span class="line" id="L309">            <span class="tok-comment">// no more tokens left to parse</span>
+</span>
+<span class="line" id="L310">            <span class="tok-kw">try</span> self.finalChecks();</span>
+<span class="line" id="L311">            <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L312">        }</span>
+<span class="line" id="L313"></span>
+<span class="line" id="L314">        <span class="tok-kw">for</span> (lexing_functions) |lexing_function| {</span>
+<span class="line" id="L315">            <span class="tok-kw">if</span> (<span class="tok-kw">try</span> lexing_function(self)) |token| {</span>
+<span class="line" id="L316">                self.argument_index += <span class="tok-number">1</span>;</span>
+<span class="line" id="L317">                <span class="tok-kw">return</span> token;</span>
+<span class="line" id="L318">            }</span>
+<span class="line" id="L319">        }</span>
+<span class="line" id="L320"></span>
+<span class="line" id="L321">        <span class="tok-comment">// handling exceptions, such as passing too many arguments that are not captured by any lexical function</span>
+</span>
+<span class="line" id="L322">        <span class="tok-kw">if</span> (self.positional_index == self.specification.positionals.len) <span class="tok-kw">return</span> <span class="tok-kw">error</span>.AssumptionTooManyPositionals;</span>
+<span class="line" id="L323"></span>
+<span class="line" id="L324">        <span class="tok-comment">// not using unreachable, since there might be a very small chance for failure</span>
+</span>
+<span class="line" id="L325">        <span class="tok-builtin">@panic</span>(<span class="tok-str">&quot;unexpected error: the argument could not be tokenized&quot;</span>);</span>
+<span class="line" id="L326">    }</span>
+<span class="line" id="L327"></span>
+<span class="line" id="L328">    <span class="tok-comment">/// A convenience method for collecting all tokens into a slice</span></span>
+<span class="line" id="L329">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">collectTokens</span>(self: *ArgumentTokenizer, allocator: Allocator) ArgumentTokenizerError![]<span class="tok-kw">const</span> Token {</span>
+<span class="line" id="L330">        <span class="tok-kw">var</span> tokens = ArrayList(Token).init(allocator);</span>
+<span class="line" id="L331">        <span class="tok-kw">errdefer</span> tokens.deinit();</span>
+<span class="line" id="L332">        <span class="tok-kw">errdefer</span> <span class="tok-kw">for</span> (tokens.items) |token| <span class="tok-kw">if</span> (token == .compound_flag) token.compound_flag.deinit();</span>
+<span class="line" id="L333"></span>
+<span class="line" id="L334">        <span class="tok-kw">while</span> (<span class="tok-kw">try</span> self.nextToken()) |token| <span class="tok-kw">try</span> tokens.append(token);</span>
+<span class="line" id="L335"></span>
+<span class="line" id="L336">        <span class="tok-kw">return</span> <span class="tok-kw">try</span> tokens.toOwnedSlice();</span>
+<span class="line" id="L337">    }</span>
+<span class="line" id="L338">};</span>
+<span class="line" id="L339"></span>
+<span class="line" id="L340"><span class="tok-comment">/// A struct for working with command-line arguments that have passed tokenization</span></span>
+<span class="line" id="L341"><span class="tok-kw">pub</span> <span class="tok-kw">const</span> ArgumentProcessor = <span class="tok-kw">struct</span> {</span>
+<span class="line" id="L342">    <span class="tok-comment">/// The assumption is made that this struct will not be initialized manually,</span></span>
+<span class="line" id="L343">    <span class="tok-comment">/// thus an allocator is stored for the initialization through the function parse,</span></span>
+<span class="line" id="L344">    <span class="tok-comment">/// so that the method deinit can free the tokens returned by struct ArgumentTokenizer</span></span>
+<span class="line" id="L345">    allocator: Allocator,</span>
+<span class="line" id="L346">    <span class="tok-comment">/// Tokens, as returned by ArgumentTokenizer for further processing through this struct's methods</span></span>
+<span class="line" id="L347">    tokens: []<span class="tok-kw">const</span> ArgumentTokenizer.Token,</span>
+<span class="line" id="L348">    <span class="tok-comment">/// The tokenizer is additionally provided as an attribute, although not used by this module</span></span>
+<span class="line" id="L349">    tokenizer: ArgumentTokenizer,</span>
+<span class="line" id="L350"></span>
+<span class="line" id="L351">    <span class="tok-comment">/// Initialize this struct by parsing an argument_vector using an ArgumentSpecification</span></span>
+<span class="line" id="L352">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">parse</span>(allocator: Allocator, specification: ArgumentSpecification, argument_vector: []<span class="tok-kw">const</span> []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) ArgumentTokenizerError!ArgumentProcessor {</span>
+<span class="line" id="L353">        <span class="tok-kw">var</span> tokenizer = ArgumentTokenizer{</span>
+<span class="line" id="L354">            .allocator = allocator,</span>
+<span class="line" id="L355">            .specification = specification,</span>
+<span class="line" id="L356">            .argument_vector = argument_vector,</span>
+<span class="line" id="L357">        };</span>
+<span class="line" id="L358"></span>
+<span class="line" id="L359">        <span class="tok-kw">return</span> ArgumentProcessor{</span>
+<span class="line" id="L360">            .allocator = allocator,</span>
+<span class="line" id="L361">            .tokens = <span class="tok-kw">try</span> tokenizer.collectTokens(allocator),</span>
+<span class="line" id="L362">            .tokenizer = tokenizer,</span>
+<span class="line" id="L363">        };</span>
+<span class="line" id="L364">    }</span>
+<span class="line" id="L365"></span>
+<span class="line" id="L366">    <span class="tok-comment">/// Free the memory of the tokens stored</span></span>
+<span class="line" id="L367">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">deinit</span>(self: ArgumentProcessor) <span class="tok-type">void</span> {</span>
+<span class="line" id="L368">        <span class="tok-kw">for</span> (self.tokens) |token| {</span>
+<span class="line" id="L369">            <span class="tok-comment">// @hasDecl magic or similar does not work, thus we use simple union type checks</span>
+</span>
+<span class="line" id="L370">            <span class="tok-kw">if</span> (token == .compound_flag) token.compound_flag.deinit();</span>
+<span class="line" id="L371">        }</span>
+<span class="line" id="L372">        self.allocator.free(self.tokens);</span>
+<span class="line" id="L373">    }</span>
+<span class="line" id="L374"></span>
+<span class="line" id="L375">    <span class="tok-comment">/// Return whether an optional or subcommand exists</span></span>
+<span class="line" id="L376">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">isArgument</span>(self: ArgumentProcessor, searched_argument_name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) <span class="tok-type">bool</span> {</span>
+<span class="line" id="L377">        <span class="tok-kw">for</span> (self.tokens) |token| <span class="tok-kw">switch</span> (token) {</span>
+<span class="line" id="L378">            .flag =&gt; |flag| {</span>
+<span class="line" id="L379">                <span class="tok-kw">if</span> (std.mem.eql(<span class="tok-type">u8</span>, flag.name, searched_argument_name)) <span class="tok-kw">return</span> <span class="tok-null">true</span>;</span>
+<span class="line" id="L380">            },</span>
+<span class="line" id="L381">            .compound_flag =&gt; |compound_flag| {</span>
+<span class="line" id="L382">                <span class="tok-kw">for</span> (compound_flag.flags) |flag_name| {</span>
+<span class="line" id="L383">                    <span class="tok-kw">if</span> (std.mem.eql(<span class="tok-type">u8</span>, flag_name, searched_argument_name)) <span class="tok-kw">return</span> <span class="tok-null">true</span>;</span>
+<span class="line" id="L384">                }</span>
+<span class="line" id="L385">            },</span>
+<span class="line" id="L386">            .positional =&gt; |positional| {</span>
+<span class="line" id="L387">                <span class="tok-kw">if</span> (std.mem.eql(<span class="tok-type">u8</span>, positional.name, searched_argument_name)) <span class="tok-kw">return</span> <span class="tok-null">true</span>;</span>
+<span class="line" id="L388">            },</span>
+<span class="line" id="L389">            .subcommand =&gt; |subcommand| {</span>
+<span class="line" id="L390">                <span class="tok-kw">if</span> (std.mem.eql(<span class="tok-type">u8</span>, subcommand.name, searched_argument_name)) <span class="tok-kw">return</span> <span class="tok-null">true</span>;</span>
+<span class="line" id="L391">            },</span>
+<span class="line" id="L392">            .extra_positional =&gt; |extra_positional| {</span>
+<span class="line" id="L393">                <span class="tok-kw">if</span> (std.mem.eql(<span class="tok-type">u8</span>, extra_positional.name, searched_argument_name)) <span class="tok-kw">return</span> <span class="tok-null">true</span>;</span>
+<span class="line" id="L394">            },</span>
+<span class="line" id="L395">        };</span>
+<span class="line" id="L396"></span>
+<span class="line" id="L397">        <span class="tok-kw">return</span> <span class="tok-null">false</span>;</span>
+<span class="line" id="L398">    }</span>
+<span class="line" id="L399"></span>
+<span class="line" id="L400">    <span class="tok-comment">/// Return the first value of an argument</span></span>
+<span class="line" id="L401">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">getArgument</span>(self: ArgumentProcessor, searched_key_name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) ?[]<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L402">        <span class="tok-kw">for</span> (self.tokens) |token| <span class="tok-kw">switch</span> (token) {</span>
+<span class="line" id="L403">            .flag =&gt; |flag| {</span>
+<span class="line" id="L404">                <span class="tok-kw">if</span> (std.mem.eql(<span class="tok-type">u8</span>, flag.name, searched_key_name)) <span class="tok-kw">return</span> flag.value;</span>
+<span class="line" id="L405">            },</span>
+<span class="line" id="L406">            .positional =&gt; |positional| {</span>
+<span class="line" id="L407">                <span class="tok-kw">if</span> (std.mem.eql(<span class="tok-type">u8</span>, positional.name, searched_key_name)) <span class="tok-kw">return</span> positional.value;</span>
+<span class="line" id="L408">            },</span>
+<span class="line" id="L409">            <span class="tok-kw">else</span> =&gt; {},</span>
+<span class="line" id="L410">        };</span>
+<span class="line" id="L411"></span>
+<span class="line" id="L412">        <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L413">    }</span>
+<span class="line" id="L414"></span>
+<span class="line" id="L415">    <span class="tok-comment">/// Return the values of all optional arguments with the specified name</span></span>
+<span class="line" id="L416">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">getArguments</span>(self: ArgumentProcessor, allocator: Allocator, searched_flag_name: []<span class="tok-kw">const</span> <span class="tok-type">u8</span>) !?[]<span class="tok-kw">const</span> []<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L417">        <span class="tok-kw">var</span> values = ArrayList([]<span class="tok-kw">const</span> <span class="tok-type">u8</span>).init(allocator);</span>
+<span class="line" id="L418"></span>
+<span class="line" id="L419">        <span class="tok-kw">for</span> (self.tokens) |token| <span class="tok-kw">switch</span> (token) {</span>
+<span class="line" id="L420">            .flag =&gt; |flag| {</span>
+<span class="line" id="L421">                <span class="tok-kw">if</span> (std.mem.eql(<span class="tok-type">u8</span>, flag.name, searched_flag_name)) <span class="tok-kw">try</span> values.append(flag.value.?);</span>
+<span class="line" id="L422">            },</span>
+<span class="line" id="L423">            <span class="tok-kw">else</span> =&gt; {},</span>
+<span class="line" id="L424">        };</span>
+<span class="line" id="L425"></span>
+<span class="line" id="L426">        <span class="tok-kw">if</span> (values.items.len == <span class="tok-number">0</span>) <span class="tok-kw">return</span> <span class="tok-null">null</span>;</span>
+<span class="line" id="L427"></span>
+<span class="line" id="L428">        <span class="tok-kw">return</span> <span class="tok-kw">try</span> values.toOwnedSlice();</span>
+<span class="line" id="L429">    }</span>
+<span class="line" id="L430"></span>
+<span class="line" id="L431">    <span class="tok-comment">// TODO?: getSubcommands</span>
+</span>
+<span class="line" id="L432"></span>
+<span class="line" id="L433">    <span class="tok-comment">/// Return a slice of all additional positionals that were not captured by ArgumentSpecification.positionals</span></span>
+<span class="line" id="L434">    <span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">getExtraPositionals</span>(self: ArgumentProcessor, allocator: Allocator) Allocator.Error![]<span class="tok-kw">const</span> []<span class="tok-kw">const</span> <span class="tok-type">u8</span> {</span>
+<span class="line" id="L435">        <span class="tok-kw">var</span> extra_positionals = ArrayList([]<span class="tok-kw">const</span> <span class="tok-type">u8</span>).init(allocator);</span>
+<span class="line" id="L436">        <span class="tok-kw">errdefer</span> extra_positionals.deinit();</span>
+<span class="line" id="L437"></span>
+<span class="line" id="L438">        <span class="tok-kw">for</span> (self.tokens) |token| <span class="tok-kw">switch</span> (token) {</span>
+<span class="line" id="L439">            .extra_positional =&gt; |extra_positional| {</span>
+<span class="line" id="L440">                <span class="tok-kw">try</span> extra_positionals.append(extra_positional.value);</span>
+<span class="line" id="L441">            },</span>
+<span class="line" id="L442">            <span class="tok-kw">else</span> =&gt; {},</span>
+<span class="line" id="L443">        };</span>
+<span class="line" id="L444"></span>
+<span class="line" id="L445">        <span class="tok-kw">return</span> <span class="tok-kw">try</span> extra_positionals.toOwnedSlice();</span>
+<span class="line" id="L446">    }</span>
+<span class="line" id="L447">};</span>
+<span class="line" id="L448"></span>
+<span class="line" id="L449"><span class="tok-comment">/// Crappy and untested convenience function to build and write a short usage message to stdout at runtime</span></span>
+<span class="line" id="L450"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">generateUsageMessage</span>(specification: ArgumentSpecification) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
+<span class="line" id="L451">    <span class="tok-kw">const</span> stdout = std.io.getStdOut().writer();</span>
+<span class="line" id="L452">    <span class="tok-kw">const</span> default_padding = <span class="tok-str">&quot; &quot;</span> ** <span class="tok-number">4</span>;</span>
+<span class="line" id="L453"></span>
+<span class="line" id="L454">    <span class="tok-kw">if</span> (specification.short_description) |short_description| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;{s}\n\n&quot;</span>, .{short_description});</span>
+<span class="line" id="L455"></span>
+<span class="line" id="L456">    <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Usage:\n&quot;</span>);</span>
+<span class="line" id="L457">    <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;{s}{s} &quot;</span>, .{ default_padding, specification.name });</span>
+<span class="line" id="L458">    <span class="tok-kw">if</span> (specification.flags.len != <span class="tok-number">0</span>) <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;[options] &quot;</span>);</span>
+<span class="line" id="L459">    <span class="tok-kw">if</span> (specification.subcommands.len != <span class="tok-number">0</span>) <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;[sub-commands] &quot;</span>);</span>
+<span class="line" id="L460">    <span class="tok-kw">for</span> (specification.positionals) |positional| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;&lt;{s}&gt; &quot;</span>, .{positional.name});</span>
+<span class="line" id="L461">    <span class="tok-kw">if</span> (specification.extra_positionals) |extra_positionals| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;[{s}...]&quot;</span>, .{extra_positionals.name});</span>
+<span class="line" id="L462">    <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n\n&quot;</span>);</span>
+<span class="line" id="L463">}</span>
+<span class="line" id="L464"></span>
+<span class="line" id="L465"><span class="tok-comment">/// Crappy and untested convenience function to build and write a default and quite detailed help message to stdout at runtime</span></span>
+<span class="line" id="L466"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">generateHelpMessage</span>(specification: ArgumentSpecification) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
+<span class="line" id="L467">    <span class="tok-comment">// This code is an absolute abomination, but I start getting annoyed by this project and this function is not a core component ¯\_(ツ)_/¯</span>
+</span>
+<span class="line" id="L468">    <span class="tok-comment">// Thus, I will throw in some useless comments to segment the code and make future code reading slightly less painful</span>
+</span>
+<span class="line" id="L469">    <span class="tok-comment">// I think better methods would be to utilize comptime or try to template more using Writer.print</span>
+</span>
+<span class="line" id="L470">    <span class="tok-kw">const</span> stdout = std.io.getStdOut().writer();</span>
+<span class="line" id="L471">    <span class="tok-kw">const</span> default_padding = <span class="tok-str">&quot; &quot;</span> ** <span class="tok-number">4</span>;</span>
+<span class="line" id="L472"></span>
+<span class="line" id="L473">    <span class="tok-kw">try</span> generateUsageMessage(specification);</span>
+<span class="line" id="L474"></span>
+<span class="line" id="L475">    <span class="tok-comment">// search for the longest names to be able to calculate a new padding later, so that all help messages will be vertically aligned</span>
+</span>
+<span class="line" id="L476">    <span class="tok-kw">var</span> longest_flag_name: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L477">    <span class="tok-kw">for</span> (specification.flags) |flag| <span class="tok-kw">if</span> (flag.name.len &gt; longest_flag_name) {</span>
+<span class="line" id="L478">        longest_flag_name = flag.name.len;</span>
+<span class="line" id="L479">    };</span>
+<span class="line" id="L480"></span>
+<span class="line" id="L481">    <span class="tok-kw">var</span> longest_subcommand_name: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L482">    <span class="tok-kw">for</span> (specification.subcommands) |subcommand| <span class="tok-kw">if</span> (subcommand.name.len &gt; longest_subcommand_name) {</span>
+<span class="line" id="L483">        longest_subcommand_name = subcommand.name.len;</span>
+<span class="line" id="L484">    };</span>
+<span class="line" id="L485"></span>
+<span class="line" id="L486">    <span class="tok-kw">var</span> longest_positional_name: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L487">    <span class="tok-kw">for</span> (specification.positionals) |positional| <span class="tok-kw">if</span> (positional.name.len &gt; longest_positional_name) {</span>
+<span class="line" id="L488">        longest_positional_name = positional.name.len;</span>
+<span class="line" id="L489">    };</span>
+<span class="line" id="L490">    <span class="tok-kw">if</span> (specification.extra_positionals) |extra_positionals| <span class="tok-kw">if</span> (extra_positionals.name.len &gt; longest_positional_name) {</span>
+<span class="line" id="L491">        longest_positional_name = extra_positionals.name.len;</span>
+<span class="line" id="L492">    };</span>
+<span class="line" id="L493"></span>
+<span class="line" id="L494">    <span class="tok-kw">if</span> (specification.long_description) |long_description| {</span>
+<span class="line" id="L495">        <span class="tok-kw">var</span> lines = std.mem.split(<span class="tok-type">u8</span>, long_description, <span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L496">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Description:\n&quot;</span>);</span>
+<span class="line" id="L497">        <span class="tok-kw">while</span> (lines.next()) |line| <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;{s}{s}\n&quot;</span>, .{ default_padding, line });</span>
+<span class="line" id="L498">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L499">    }</span>
+<span class="line" id="L500"></span>
+<span class="line" id="L501">    <span class="tok-kw">if</span> (specification.positionals.len != <span class="tok-number">0</span>) {</span>
+<span class="line" id="L502">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Required:\n&quot;</span>);</span>
+<span class="line" id="L503">        <span class="tok-kw">for</span> (specification.positionals) |positional| {</span>
+<span class="line" id="L504">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
+<span class="line" id="L505">            <span class="tok-kw">try</span> stdout.writeAll(positional.name);</span>
+<span class="line" id="L506"></span>
+<span class="line" id="L507">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
+</span>
+<span class="line" id="L508">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L509">            <span class="tok-kw">while</span> (index &lt;= (longest_positional_name - positional.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
+<span class="line" id="L510">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
+<span class="line" id="L511">            }</span>
+<span class="line" id="L512"></span>
+<span class="line" id="L513">            <span class="tok-kw">try</span> stdout.writeAll(positional.help <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
+<span class="line" id="L514">            <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L515">        }</span>
+<span class="line" id="L516"></span>
+<span class="line" id="L517">        <span class="tok-kw">if</span> (specification.extra_positionals) |extra_positionals| {</span>
+<span class="line" id="L518">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
+<span class="line" id="L519">            <span class="tok-kw">try</span> stdout.writeAll(extra_positionals.name);</span>
+<span class="line" id="L520"></span>
+<span class="line" id="L521">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
+</span>
+<span class="line" id="L522">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L523">            <span class="tok-kw">while</span> (index &lt;= (longest_positional_name - extra_positionals.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
+<span class="line" id="L524">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
+<span class="line" id="L525">            }</span>
+<span class="line" id="L526"></span>
+<span class="line" id="L527">            <span class="tok-kw">try</span> stdout.writeAll(extra_positionals.help <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
+<span class="line" id="L528">            <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L529">        }</span>
+<span class="line" id="L530"></span>
+<span class="line" id="L531">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L532">    }</span>
+<span class="line" id="L533"></span>
+<span class="line" id="L534">    <span class="tok-kw">if</span> (specification.flags.len != <span class="tok-number">0</span>) {</span>
+<span class="line" id="L535">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Options:\n&quot;</span>);</span>
+<span class="line" id="L536">        <span class="tok-kw">for</span> (specification.flags) |flag| {</span>
+<span class="line" id="L537">            <span class="tok-comment">// add short name</span>
+</span>
+<span class="line" id="L538">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
+<span class="line" id="L539">            <span class="tok-kw">if</span> (flag.short) |short| {</span>
+<span class="line" id="L540">                <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;-{c}, &quot;</span>, .{short});</span>
+<span class="line" id="L541">            } <span class="tok-kw">else</span> {</span>
+<span class="line" id="L542">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;    &quot;</span>);</span>
+<span class="line" id="L543">            }</span>
+<span class="line" id="L544"></span>
+<span class="line" id="L545">            <span class="tok-comment">// add flag name</span>
+</span>
+<span class="line" id="L546">            <span class="tok-kw">try</span> stdout.print(<span class="tok-str">&quot;--{s}&quot;</span>, .{flag.name});</span>
+<span class="line" id="L547"></span>
+<span class="line" id="L548">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
+</span>
+<span class="line" id="L549">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L550">            <span class="tok-kw">while</span> (index &lt;= (longest_flag_name - flag.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
+<span class="line" id="L551">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
+<span class="line" id="L552">            }</span>
+<span class="line" id="L553"></span>
+<span class="line" id="L554">            <span class="tok-comment">// option description</span>
+</span>
+<span class="line" id="L555">            <span class="tok-kw">try</span> stdout.writeAll(flag.help <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
+<span class="line" id="L556">            <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L557">        }</span>
+<span class="line" id="L558">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L559">    }</span>
+<span class="line" id="L560"></span>
+<span class="line" id="L561">    <span class="tok-kw">if</span> (specification.subcommands.len != <span class="tok-number">0</span>) {</span>
+<span class="line" id="L562">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;Sub-commands:\n&quot;</span>);</span>
+<span class="line" id="L563">        <span class="tok-kw">for</span> (specification.subcommands) |subcommand| {</span>
+<span class="line" id="L564">            <span class="tok-kw">try</span> stdout.writeAll(default_padding);</span>
+<span class="line" id="L565">            <span class="tok-kw">try</span> stdout.writeAll(subcommand.name);</span>
+<span class="line" id="L566"></span>
+<span class="line" id="L567">            <span class="tok-comment">// add padding to vertically align the option descriptions</span>
+</span>
+<span class="line" id="L568">            <span class="tok-kw">var</span> index: <span class="tok-type">usize</span> = <span class="tok-number">0</span>;</span>
+<span class="line" id="L569">            <span class="tok-kw">while</span> (index &lt;= (longest_subcommand_name - subcommand.name.len + <span class="tok-number">2</span>)) : (index += <span class="tok-number">1</span>) {</span>
+<span class="line" id="L570">                <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot; &quot;</span>);</span>
+<span class="line" id="L571">            }</span>
+<span class="line" id="L572"></span>
+<span class="line" id="L573">            <span class="tok-kw">try</span> stdout.writeAll(subcommand.short_description <span class="tok-kw">orelse</span> <span class="tok-str">&quot; /&quot;</span>);</span>
+<span class="line" id="L574">            <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L575">        }</span>
+<span class="line" id="L576">        <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;\n&quot;</span>);</span>
+<span class="line" id="L577">    }</span>
+<span class="line" id="L578">}</span>
+<span class="line" id="L579"></span>
+<span class="line" id="L580"><span class="tok-comment">/// A convenience function for writing a information about an ArgumentTokenizerError to stdout</span></span>
+<span class="line" id="L581"><span class="tok-kw">pub</span> <span class="tok-kw">fn</span> <span class="tok-fn">defaultErrorHandler</span>(tokenization_error: ArgumentTokenizerError) <span class="tok-type">anyerror</span>!<span class="tok-type">void</span> {</span>
+<span class="line" id="L582">    <span class="tok-kw">const</span> stdout = std.io.getStdErr().writer();</span>
+<span class="line" id="L583"></span>
+<span class="line" id="L584">    <span class="tok-kw">switch</span> (tokenization_error) {</span>
+<span class="line" id="L585">        <span class="tok-kw">error</span>.MissingPositionals =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: not all required arguments were provided\n&quot;</span>),</span>
+<span class="line" id="L586">        <span class="tok-kw">error</span>.FlagNotFound =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a provided option does not exists or might be misspelled\n&quot;</span>),</span>
+<span class="line" id="L587">        <span class="tok-kw">error</span>.SplitFlagValue =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a provided option could not be parsed for its assigned value\n&quot;</span>),</span>
+<span class="line" id="L588">        <span class="tok-kw">error</span>.AssumptionTooManyPositionals =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: too many arguments were presumably provided\n&quot;</span>),</span>
+<span class="line" id="L589">        <span class="tok-kw">error</span>.TooManyEqualSigns =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: options may only allow for one equal sign as part of the gnu-style syntax\n&quot;</span>),</span>
+<span class="line" id="L590">        <span class="tok-kw">error</span>.ValueNotExpected =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a value was provided for an option that did not require one\n&quot;</span>),</span>
+<span class="line" id="L591">        <span class="tok-kw">error</span>.OutOfMemory =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: there is not enough free memory to parse the provided arguments\n&quot;</span>),</span>
+<span class="line" id="L592">        <span class="tok-kw">error</span>.NoValueProvided =&gt; <span class="tok-kw">try</span> stdout.writeAll(<span class="tok-str">&quot;fatal: a flag requires a value\n&quot;</span>),</span>
+<span class="line" id="L593">    }</span>
+<span class="line" id="L594">}</span>
+<span class="line" id="L595"></span>
+</code></pre></body>
+</html>
