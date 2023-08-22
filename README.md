@@ -33,7 +33,7 @@ const specification = argtic.ArgumentSpecification{
 };
 
 const argument_vector = try std.process.argsAlloc(allocator);
-defer allocator.free(argument_vector);
+defer std.process.argsFree(allocator, argument_vector);
 
 const arguments = try argtic.ArgumentProcessor.parse(allocator, specification, argument_vector[1..]);
 defer arguments.deinit();

@@ -5,7 +5,7 @@ const argtic = @import("zig-argtic");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.debug.assert(!gpa.deinit());
+    defer std.debug.assert(gpa.deinit() == .ok);
     const allocator = gpa.allocator();
 
     const specification = argtic.ArgumentSpecification{
@@ -20,7 +20,7 @@ pub fn main() !void {
     };
 
     const argument_vector = try std.process.argsAlloc(allocator);
-    defer allocator.free(argument_vector);
+    defer std.process.argsFree(allocator, argument_vector);
 
     const arguments = argtic.ArgumentProcessor.parse(allocator, specification, argument_vector[1..]) catch |e| return try argtic.defaultErrorHandler(e);
     defer arguments.deinit();
