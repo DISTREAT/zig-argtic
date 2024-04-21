@@ -2,7 +2,7 @@
 
 A library for parsing command-line options, arguments, and sub-commands.
 
-_Build using zig version: `0.11.0`_
+_Build using zig version: `0.12.0`_
 
 ## How does it compare to the POSIX and GNU conventions?
 
@@ -68,4 +68,3 @@ Anyway, don't underestimate the project of writing a CLI argument parser that su
 Every single stage of this project tested me and my idealistic bed-of-rose-loving ass. Considering all I've just said, I'd recommend writing an argument parser once in your life - it just makes you feel cured of all previous projects (or sad about your life choices) - because I hated it, especially in the final half-assed stages.
 
 Now that I succeeded (more or less), you may consider this my magnum opus of yak shaving.
-

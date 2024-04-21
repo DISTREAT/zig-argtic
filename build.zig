@@ -1,12 +1,13 @@
 const std = @import("std");
 
-pub fn build(b: *std.build.Builder) void {
+pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardOptimizeOption(.{});
 
     _ = b.addModule("zig-argtic", .{
-        .source_file = .{ .path = "src/zig-argtic.zig" },
-        .dependencies = &[_]std.Build.ModuleDependency{},
+        .root_source_file = .{ .path = "src/zig-argtic.zig" },
+        .optimize = mode,
+        .target = target,
     });
 
     const lib = b.addStaticLibrary(.{
