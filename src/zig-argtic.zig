@@ -215,7 +215,7 @@ pub const ArgumentTokenizer = struct {
             if (!std.mem.eql(u8, argument[0..2], "--")) return null;
             if (std.mem.count(u8, argument, "=") != 1) return error.TooManyEqualSigns;
 
-            var split = std.mem.split(u8, argument[2..], "=");
+            var split = std.mem.splitScalar(u8, argument[2..], '=');
 
             const flag_name = split.next() orelse return error.SplitFlagValue;
             const flag_value = split.next() orelse return error.SplitFlagValue;
@@ -490,7 +490,7 @@ pub fn generateHelpMessage(specification: ArgumentSpecification) anyerror!void {
     };
 
     if (specification.long_description) |long_description| {
-        var lines = std.mem.split(u8, long_description, "\n");
+        var lines = std.mem.splitScalar(u8, long_description, '\n');
         try stdout.writeAll("Description:\n");
         while (lines.next()) |line| try stdout.print("{s}{s}\n", .{ default_padding, line });
         try stdout.writeAll("\n");

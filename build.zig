@@ -5,18 +5,18 @@ pub fn build(b: *std.Build) void {
     const mode = b.standardOptimizeOption(.{});
 
     _ = b.addModule("zig-argtic", .{
-        .root_source_file = .{ .path = "src/zig-argtic.zig" },
+        .root_source_file = b.path("src/zig-argtic.zig"),
         .optimize = mode,
         .target = target,
     });
 
     const lib = b.addStaticLibrary(.{
         .name = "zig-argtic",
-        .root_source_file = .{ .path = "src/zig-argtic.zig" },
+        .root_source_file = b.path("src/zig-argtic.zig"),
         .optimize = mode,
         .target = target,
     });
-    const lib_tests = b.addTest(.{ .root_source_file = .{ .path = "src/tests.zig" } });
+    const lib_tests = b.addTest(.{ .root_source_file = b.path("src/tests.zig") });
 
     const install_docs = b.addInstallDirectory(.{
         .source_dir = lib.getEmittedDocs(),

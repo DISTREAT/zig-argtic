@@ -2,7 +2,7 @@
 
 A library for parsing command-line options, arguments, and sub-commands.
 
-_Build using zig version: `0.12.0`_
+_Build using zig version: `0.14.1`_
 
 ## How does it compare to the POSIX and GNU conventions?
 
